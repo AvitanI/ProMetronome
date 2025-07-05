@@ -22,7 +22,6 @@ import {
   Chip,
   Stack,
   Fab,
-  useTheme,
   useMediaQuery,
   Divider,
   Alert,
@@ -40,6 +39,7 @@ import {
   Clear,
   CloudDownload,
 } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
 import useMetronomeStore, { TIME_SIGNATURES } from '../stores/metronomeStore';
 import SongSearchDialog from './SongSearchDialog';
 

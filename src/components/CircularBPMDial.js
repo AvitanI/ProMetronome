@@ -1,14 +1,14 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  useTheme,
   useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import useMetronomeStore from '../stores/metronomeStore';
 
-const CircularBPMDial = ({ size = 280 }) => {
+const CircularBPMDial = React.memo(({ size = 280 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const adjustedSize = isMobile ? Math.min(size, 240) : size;
@@ -28,8 +28,13 @@ const CircularBPMDial = ({ size = 280 }) => {
 
   const minBpm = 30;
   const maxBpm = 300;
-  const radius = adjustedSize * 0.35;
-  const strokeWidth = adjustedSize * 0.08;
+  
+  // Memoize expensive calculations
+  const { radius, strokeWidth, progress } = useMemo(() => ({
+    radius: adjustedSize * 0.35,
+    strokeWidth: adjustedSize * 0.08,
+    progress: (bpm - minBpm) / (maxBpm - minBpm)
+  }), [adjustedSize, bpm, minBpm, maxBpm]);
 
   // Calculate rotation based on BPM
   useEffect(() => {
@@ -134,7 +139,7 @@ const CircularBPMDial = ({ size = 280 }) => {
   }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   // Calculate progress for the arc
-  const progress = (bpm - minBpm) / (maxBpm - minBpm);
+  // const progress = (bpm - minBpm) / (maxBpm - minBpm); // Removed duplicate, using memoized version
 
   // Pulse animation when playing
   const pulseKeyframes = `
@@ -323,6 +328,6 @@ const CircularBPMDial = ({ size = 280 }) => {
       })}
     </Paper>
   );
-};
+});
 
 export default CircularBPMDial;

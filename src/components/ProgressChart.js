@@ -8,11 +8,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  useTheme,
   Grid,
   Chip,
   Stack,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   LineChart,
   Line,

@@ -4,10 +4,15 @@
   "description": "Professional Drums Metronome Web App",
   "main": "index.js",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "build:aot": "GENERATE_SOURCEMAP=false react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-scripts eject",
+    "analyze": "node analyze-bundle.js",
+    "build:analyze": "npm run build:aot && npm run analyze",
+    "build:profile": "npx react-scripts build --profile",
+    "preload-check": "npm run build:aot && node preload-check.js"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
@@ -21,6 +26,14 @@
     "react-scripts": "5.0.1",
     "recharts": "^3.0.2",
     "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "babel-plugin-import": "^1.13.8",
+    "compression-webpack-plugin": "^10.0.0",
+    "customize-cra": "^1.0.0",
+    "react-app-rewired": "^2.2.1",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack-bundle-analyzer": "^4.10.2"
   },
   "eslintConfig": {
     "extends": [

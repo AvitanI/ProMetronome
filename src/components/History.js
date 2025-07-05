@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -12,7 +12,6 @@ import {
   IconButton,
   Divider,
   Chip,
-  useTheme,
   useMediaQuery,
   Button,
   Alert,
@@ -28,10 +27,11 @@ import {
   ShowChart as ShowChartIcon,
   List as ListIcon,
 } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
 import useMetronomeStore from '../stores/metronomeStore';
 import ProgressChart from './ProgressChart';
 
-const History = () => {
+const History = React.memo(() => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [historyTab, setHistoryTab] = useState(0);
@@ -43,23 +43,26 @@ const History = () => {
     getHistoryStats,
     generateSampleData
   } = useMetronomeStore();
-  
+
   console.log('History component - sessions:', sessions);
   
-  const stats = getHistoryStats();
+  // Memoize expensive calculations
+  const stats = useMemo(() => getHistoryStats(), [sessions, getHistoryStats]);
 
-  const formatDate = (dateString) => {
+  // Memoize formatters to prevent recreating on every render
+  const formatDate = useCallback((dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  }, []);
 
-  const formatDuration = (duration) => {
+  const formatDuration = useCallback((duration) => {
     const minutes = Math.floor(duration / (1000 * 60));
     const seconds = Math.floor((duration % (1000 * 60)) / 1000);
     return `${minutes}m ${seconds}s`;
-  };
+  }, []);
 
-  const StatCard = ({ icon, title, value, subtitle }) => (
+  // Memoize StatCard component to prevent re-renders
+  const StatCard = useCallback(({ icon, title, value, subtitle }) => (
     <Card
       elevation={2}
       sx={{
@@ -104,6 +107,12 @@ const History = () => {
         )}
       </CardContent>
     </Card>
+  ), [theme]);
+
+  // Optimize session list rendering with useMemo
+  const reversedSessions = useMemo(() => 
+    sessions.slice().reverse(), 
+    [sessions]
   );
 
   if (sessions.length === 0) {
@@ -237,7 +246,7 @@ const History = () => {
                   </Box>
                   
                   <List>
-                    {sessions.slice().reverse().map((session, index) => (
+                    {reversedSessions.map((session, index) => (
                       <React.Fragment key={session.id}>
                         <ListItem
                           sx={{
@@ -299,7 +308,7 @@ const History = () => {
                             </IconButton>
                           </ListItemSecondaryAction>
                         </ListItem>
-                        {index < sessions.length - 1 && <Divider />}
+                        {index < reversedSessions.length - 1 && <Divider />}
                       </React.Fragment>
                     ))}
                   </List>
@@ -311,6 +320,6 @@ const History = () => {
       )}
     </Box>
   );
-};
+});
 
 export default History;

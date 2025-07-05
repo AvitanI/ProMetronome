@@ -1,6 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import {
-  ThemeProvider,
   CssBaseline,
   Box,
   AppBar,
@@ -14,7 +13,9 @@ import {
   Tabs,
   Tab,
   Chip,
+  CircularProgress,
 } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
 import {
   Brightness4,
   Brightness7,
@@ -27,20 +28,22 @@ import {
   Mic as MicIcon,
 } from '@mui/icons-material';
 import useMetronomeStore from './stores/metronomeStore';
-import createCustomTheme from './theme/theme';
+import createCustomTheme from './theme/optimizedTheme';
 import MetronomeControls from './components/MetronomeControls';
-import SongManager from './components/SongManager';
-import History from './components/History';
-import CoachDashboard from './components/CoachDashboard';
-import LiveBPMDetector from './components/LiveBPMDetector';
 import globalAudioService from './services/globalAudioService';
+
+// Lazy load heavy components
+const SongManager = lazy(() => import('./components/SongManager'));
+const History = lazy(() => import('./components/History'));
+const CoachDashboard = lazy(() => import('./components/CoachDashboard'));
+const LiveBPMDetector = lazy(() => import('./components/LiveBPMDetector'));
 
 // Import version from package.json
 const packageInfo = require('../package.json');
 
 function App() {
   const { isDarkMode, toggleTheme } = useMetronomeStore();
-  const theme = createCustomTheme(isDarkMode);
+  const theme = useMemo(() => createCustomTheme(isDarkMode), [isDarkMode]);
   const metronomeRef = useRef(null);
   const startMetronomeRef = useRef(null);
   const [currentTab, setCurrentTab] = useState(0);
@@ -54,7 +57,7 @@ function App() {
   }, []);
 
   // Handle song play: scroll to metronome and start it
-  const handlePlaySong = () => {
+  const handlePlaySong = useCallback(() => {
     // Switch to metronome tab first
     setCurrentTab(0);
     
@@ -72,11 +75,18 @@ function App() {
         startMetronomeRef.current.startMetronome();
       }
     }, 500);
-  };
+  }, []);
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = useCallback((event, newValue) => {
     setCurrentTab(newValue);
-  };
+  }, []);
+
+  // Loading component for lazy-loaded components
+  const LoadingFallback = () => (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <CircularProgress />
+    </Box>
+  );
 
   return (
     <ThemeProvider theme={theme}>
@@ -239,19 +249,27 @@ function App() {
             )}
 
             {currentTab === 1 && (
-              <SongManager onPlaySong={handlePlaySong} />
+              <Suspense fallback={<LoadingFallback />}>
+                <SongManager onPlaySong={handlePlaySong} />
+              </Suspense>
             )}
 
             {currentTab === 2 && (
-              <LiveBPMDetector />
+              <Suspense fallback={<LoadingFallback />}>
+                <LiveBPMDetector />
+              </Suspense>
             )}
 
             {currentTab === 3 && (
-              <CoachDashboard />
+              <Suspense fallback={<LoadingFallback />}>
+                <CoachDashboard />
+              </Suspense>
             )}
 
             {currentTab === 4 && (
-              <History />
+              <Suspense fallback={<LoadingFallback />}>
+                <History />
+              </Suspense>
             )}
           </Box>
 

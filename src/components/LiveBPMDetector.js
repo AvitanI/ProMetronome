@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -13,9 +13,9 @@ import {
   Switch,
   FormControlLabel,
   Alert,
-  useTheme,
   Tooltip,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Mic,
   MicOff,
@@ -25,7 +25,7 @@ import {
 } from '@mui/icons-material';
 import useMetronomeStore from '../stores/metronomeStore';
 
-const LiveBPMDetector = () => {
+const LiveBPMDetector = React.memo(() => {
   const theme = useTheme();
   const { setBpm } = useMetronomeStore();
   
@@ -35,6 +35,7 @@ const LiveBPMDetector = () => {
   const mediaStreamRef = useRef(null);
   const audioDataRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const processingIntervalRef = useRef(null); // Add interval ref for better control
   
   // Beat detection state
   const lastBeatTimeRef = useRef(0);
@@ -50,6 +51,9 @@ const LiveBPMDetector = () => {
   const [error, setError] = useState(null);
   const [recentBeats, setRecentBeats] = useState([]);
   const [debugInfo, setDebugInfo] = useState('');
+
+  // Throttle audio processing to reduce CPU usage
+  const PROCESSING_INTERVAL = 50; // Process every 50ms instead of every frame
   
   // Beat detection algorithm
   const detectBeats = useCallback((audioData, currentTime) => {
@@ -208,8 +212,11 @@ const LiveBPMDetector = () => {
       }
     }
     
-    animationFrameRef.current = requestAnimationFrame(processAudio);
-  }, [detectBeats, calculateBPM, autoSync, setBpm]);
+    // Use interval instead of requestAnimationFrame for better performance
+    if (isListening && !processingIntervalRef.current) {
+      processingIntervalRef.current = setInterval(processAudio, PROCESSING_INTERVAL);
+    }
+  }, [detectBeats, calculateBPM, autoSync, setBpm, isListening]);
   
   // Start listening
   const startListening = async () => {
@@ -289,6 +296,12 @@ const LiveBPMDetector = () => {
   
   // Stop listening
   const stopListening = () => {
+    // Clean up interval
+    if (processingIntervalRef.current) {
+      clearInterval(processingIntervalRef.current);
+      processingIntervalRef.current = null;
+    }
+    
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
@@ -539,6 +552,6 @@ const LiveBPMDetector = () => {
       </CardContent>
     </Card>
   );
-};
+});
 
 export default LiveBPMDetector;

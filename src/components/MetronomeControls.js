@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -15,10 +15,10 @@ import {
   FormControlLabel,
   Chip,
   Stack,
-  useTheme,
   useMediaQuery,
   Tooltip,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   PlayArrow,
   Pause,
@@ -31,11 +31,29 @@ import useMetronomeStore, { TIME_SIGNATURES, CLICK_SOUNDS, SUBDIVISIONS } from '
 import globalAudioService from '../services/globalAudioService';
 import CircularBPMDial from './CircularBPMDial';
 
-const MetronomeControls = forwardRef((props, ref) => {
+// Debounce utility function
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+const MetronomeControls = React.memo(forwardRef((props, ref) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const timerRef = useRef(null);
   const [audioError, setAudioError] = useState(null);
+  const [localBpm, setLocalBpm] = useState(120);
 
   const {
     bpm,
@@ -65,8 +83,34 @@ const MetronomeControls = forwardRef((props, ref) => {
     decrementTimeRemaining,
   } = useMetronomeStore();
 
+  // Debounce BPM changes to prevent excessive audio engine updates
+  const debouncedLocalBpm = useDebounce(localBpm, 100);
+
+  // Sync debounced BPM with store
+  useEffect(() => {
+    if (debouncedLocalBpm !== bpm) {
+      setBpm(debouncedLocalBpm);
+    }
+  }, [debouncedLocalBpm, bpm, setBpm]);
+
+  // Sync store BPM with local state
+  useEffect(() => {
+    setLocalBpm(bpm);
+  }, [bpm]);
+
   const [beatIndicators, setBeatIndicators] = useState([]);
   const [subdivisionIndicators, setSubdivisionIndicators] = useState([]);
+
+  // Memoize beat and subdivision indicators to prevent unnecessary re-renders
+  const memoizedBeatIndicators = useMemo(() => 
+    Array(timeSignature.beats).fill(false),
+    [timeSignature.beats]
+  );
+
+  const memoizedSubdivisionIndicators = useMemo(() => 
+    Array(subdivision.value).fill(false),
+    [subdivision.value]
+  );
 
   // Mobile audio initialization effect
   useEffect(() => {
@@ -88,11 +132,11 @@ const MetronomeControls = forwardRef((props, ref) => {
 
   // Initialize beat indicators
   useEffect(() => {
-    setBeatIndicators(Array(timeSignature.beats).fill(false));
-    setSubdivisionIndicators(Array(subdivision.value).fill(false));
+    setBeatIndicators(memoizedBeatIndicators);
+    setSubdivisionIndicators(memoizedSubdivisionIndicators);
     setCurrentBeat(0);
     setCurrentSubdivision(0);
-  }, [timeSignature, subdivision, setCurrentBeat, setCurrentSubdivision]);
+  }, [timeSignature, subdivision, setCurrentBeat, setCurrentSubdivision, memoizedBeatIndicators, memoizedSubdivisionIndicators]);
 
   // Handle play/pause with better mobile error handling
   const handlePlayPause = useCallback(async () => {
@@ -245,11 +289,11 @@ const MetronomeControls = forwardRef((props, ref) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle BPM increment/decrement
-  const handleBpmChange = (delta) => {
-    const newBpm = Math.max(30, Math.min(300, bpm + delta));
-    setBpm(newBpm);
-  };
+  // Handle BPM increment/decrement with local state for smoother UI
+  const handleBpmChange = useCallback((delta) => {
+    const newBpm = Math.max(30, Math.min(300, localBpm + delta));
+    setLocalBpm(newBpm);
+  }, [localBpm]);
 
   return (
     <Card 
@@ -284,7 +328,7 @@ const MetronomeControls = forwardRef((props, ref) => {
           </IconButton>
           <Box sx={{ mx: 2, minWidth: 80, textAlign: 'center' }}>
             <Typography variant="h4" color="primary" fontWeight="bold">
-              {bpm}
+              {localBpm}
             </Typography>
           </Box>
           <IconButton 
@@ -596,6 +640,6 @@ const MetronomeControls = forwardRef((props, ref) => {
       </CardContent>
     </Card>
   );
-});
+}));
 
 export default MetronomeControls;
