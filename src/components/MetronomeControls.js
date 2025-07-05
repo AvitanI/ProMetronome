@@ -35,6 +35,7 @@ const MetronomeControls = forwardRef((props, ref) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const timerRef = useRef(null);
+  const [audioError, setAudioError] = useState(null);
 
   const {
     bpm,
@@ -67,6 +68,24 @@ const MetronomeControls = forwardRef((props, ref) => {
   const [beatIndicators, setBeatIndicators] = useState([]);
   const [subdivisionIndicators, setSubdivisionIndicators] = useState([]);
 
+  // Mobile audio initialization effect
+  useEffect(() => {
+    const initMobileAudio = async () => {
+      if (isMobile) {
+        try {
+          // Pre-initialize audio service on mobile
+          await globalAudioService.initialize();
+          console.log('Mobile audio service pre-initialized');
+        } catch (error) {
+          console.error('Failed to pre-initialize mobile audio:', error);
+          setAudioError('Audio initialization failed. Try refreshing the page.');
+        }
+      }
+    };
+
+    initMobileAudio();
+  }, [isMobile]);
+
   // Initialize beat indicators
   useEffect(() => {
     setBeatIndicators(Array(timeSignature.beats).fill(false));
@@ -75,59 +94,73 @@ const MetronomeControls = forwardRef((props, ref) => {
     setCurrentSubdivision(0);
   }, [timeSignature, subdivision, setCurrentBeat, setCurrentSubdivision]);
 
-  // Handle play/pause
+  // Handle play/pause with better mobile error handling
   const handlePlayPause = useCallback(async () => {
-    if (isPlaying) {
-      // Stop
-      globalAudioService.stop();
-      setIsPlaying(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    } else {
-      // Start
-      if (timerEnabled) {
-        setTimeRemaining(timerDuration);
-      }
-
-      const success = await globalAudioService.start(
-        bpm,
-        timeSignature.beats,
-        accentFirstBeat,
-        clickSound.id,
-        volume,
-        subdivision.value,
-        subdivisionVolume,
-        (beatNumber) => {
-          // Update beat indicators
-          setCurrentBeat(beatNumber);
-          setBeatIndicators(prev => 
-            prev.map((_, index) => index === beatNumber)
-          );
-        },
-        (beatNumber, subdivisionNumber) => {
-          // Update subdivision indicators
-          setCurrentSubdivision(subdivisionNumber);
-          setSubdivisionIndicators(prev => 
-            prev.map((_, index) => index === subdivisionNumber)
-          );
-        }
-      );
-
-      if (success) {
-        setIsPlaying(true);
-
-        // Start timer if enabled
-        if (timerEnabled && timerDuration > 0) {
-          timerRef.current = setInterval(() => {
-            decrementTimeRemaining();
-          }, 1000);
+    try {
+      setAudioError(null); // Clear any previous errors
+      
+      if (isPlaying) {
+        // Stop
+        globalAudioService.stop();
+        setIsPlaying(false);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
         }
       } else {
-        // Show error message or retry
-        console.error('Failed to start metronome - audio context not available');
+        // Start
+        if (timerEnabled) {
+          setTimeRemaining(timerDuration);
+        }
+
+        const success = await globalAudioService.start(
+          bpm,
+          timeSignature.beats,
+          accentFirstBeat,
+          clickSound.id,
+          volume,
+          subdivision.value,
+          subdivisionVolume,
+          (beatNumber) => {
+            // Update beat indicators
+            setCurrentBeat(beatNumber);
+            setBeatIndicators(prev => 
+              prev.map((_, index) => index === beatNumber)
+            );
+          },
+          (beatNumber, subdivisionNumber) => {
+            // Update subdivision indicators
+            setCurrentSubdivision(subdivisionNumber);
+            setSubdivisionIndicators(prev => 
+              prev.map((_, index) => index === subdivisionNumber)
+            );
+          }
+        );
+
+        if (success) {
+          setIsPlaying(true);
+
+          // Start timer if enabled
+          if (timerEnabled && timerDuration > 0) {
+            timerRef.current = setInterval(() => {
+              decrementTimeRemaining();
+            }, 1000);
+          }
+        } else {
+          // Better error handling for mobile
+          const errorMsg = isMobile 
+            ? 'Audio failed to start. Please ensure your device volume is up and try again.'
+            : 'Failed to start metronome - audio context not available';
+          setAudioError(errorMsg);
+          console.error(errorMsg);
+        }
       }
+    } catch (error) {
+      console.error('Error in handlePlayPause:', error);
+      setAudioError(isMobile 
+        ? 'Audio error occurred. Try turning up your device volume and refresh the page.'
+        : 'Audio error occurred. Please try again.'
+      );
     }
   }, [
     isPlaying,
@@ -144,7 +177,8 @@ const MetronomeControls = forwardRef((props, ref) => {
     setTimeRemaining,
     setCurrentBeat,
     setCurrentSubdivision,
-    decrementTimeRemaining
+    decrementTimeRemaining,
+    isMobile
   ]);
 
   // Handle stop
@@ -366,6 +400,26 @@ const MetronomeControls = forwardRef((props, ref) => {
           )}
         </Box>
 
+        {/* Audio Error Display */}
+        {audioError && (
+          <Box sx={{ mb: 2 }}>
+            <Typography 
+              variant="body2" 
+              color="error" 
+              align="center"
+              sx={{ 
+                p: 1, 
+                backgroundColor: 'error.light',
+                color: 'error.contrastText',
+                borderRadius: 1,
+                fontSize: '0.875rem'
+              }}
+            >
+              {audioError}
+            </Typography>
+          </Box>
+        )}
+
         {/* Settings Grid */}
         <Box sx={{ 
           display: 'grid', 
@@ -530,6 +584,15 @@ const MetronomeControls = forwardRef((props, ref) => {
             )}
           </Box>
         </Stack>
+
+        {/* Error Message */}
+        {audioError && (
+          <Box sx={{ mt: 2, p: 1, borderRadius: 1, backgroundColor: theme.palette.error.light }}>
+            <Typography variant="body2" color="error.main">
+              {audioError}
+            </Typography>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

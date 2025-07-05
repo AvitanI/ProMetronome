@@ -13,6 +13,7 @@ import {
   Paper,
   Tabs,
   Tab,
+  Chip,
 } from '@mui/material';
 import {
   Brightness4,
@@ -23,6 +24,7 @@ import {
   LibraryMusic as LibraryMusicIcon,
   History as HistoryIcon,
   EmojiEvents as CoachIcon,
+  Mic as MicIcon,
 } from '@mui/icons-material';
 import useMetronomeStore from './stores/metronomeStore';
 import createCustomTheme from './theme/theme';
@@ -30,7 +32,11 @@ import MetronomeControls from './components/MetronomeControls';
 import SongManager from './components/SongManager';
 import History from './components/History';
 import CoachDashboard from './components/CoachDashboard';
+import LiveBPMDetector from './components/LiveBPMDetector';
 import globalAudioService from './services/globalAudioService';
+
+// Import version from package.json
+const packageInfo = require('../package.json');
 
 function App() {
   const { isDarkMode, toggleTheme } = useMetronomeStore();
@@ -98,6 +104,19 @@ function App() {
             >
               Pro Metronome
             </Typography>
+            <Chip 
+              label={`v${packageInfo.version}`}
+              size="small"
+              sx={{ 
+                ml: 2, 
+                fontSize: '0.75rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                }
+              }}
+            />
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -182,6 +201,11 @@ function App() {
                 iconPosition="start"
               />
               <Tab
+                icon={<MicIcon />}
+                label="BPM Detector"
+                iconPosition="start"
+              />
+              <Tab
                 icon={<CoachIcon />}
                 label="Coach"
                 iconPosition="start"
@@ -219,10 +243,14 @@ function App() {
             )}
 
             {currentTab === 2 && (
-              <CoachDashboard />
+              <LiveBPMDetector />
             )}
 
             {currentTab === 3 && (
+              <CoachDashboard />
+            )}
+
+            {currentTab === 4 && (
               <History />
             )}
           </Box>

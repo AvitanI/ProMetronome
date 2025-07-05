@@ -2,10 +2,13 @@ class AudioEngine {
   constructor() {
     this.audioContext = null;
     this.nextNoteTime = 0.0;
-    this.lookahead = 25.0; // How frequently to call scheduling function (in milliseconds)
-    this.scheduleAheadTime = 0.1; // How far ahead to schedule audio (sec)
+    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Increase lookahead and schedule ahead time for mobile devices
+    this.lookahead = this.isMobile ? 10.0 : 25.0; // More frequent scheduling on mobile
+    this.scheduleAheadTime = this.isMobile ? 0.25 : 0.1; // More buffer time for mobile
     this.notesInQueue = [];
     this.timerWorker = null;
+    this.rafId = null;
     this.isRunning = false;
     this.initializeAudioContext();
   }
@@ -25,7 +28,17 @@ class AudioEngine {
       try {
         // Create audio context on first user interaction
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Set mobile-specific optimizations
+        if (this.isMobile && this.audioContext.outputLatency !== undefined) {
+          // Account for output latency on mobile devices
+          this.scheduleAheadTime = Math.max(this.scheduleAheadTime, this.audioContext.outputLatency + 0.05);
+        }
+        
         console.log('AudioContext created, state:', this.audioContext.state);
+        console.log('Mobile device detected:', this.isMobile);
+        console.log('Output latency:', this.audioContext.outputLatency || 'unknown');
+        console.log('Schedule ahead time:', this.scheduleAheadTime);
       } catch (error) {
         console.error('Failed to create audio context:', error);
         return false;
@@ -47,37 +60,79 @@ class AudioEngine {
   }
 
   createTimerWorker() {
-    // Create a worker for precise timing
-    const workerScript = `
-      var timerID = null;
-      var interval = 100;
-      
-      self.onmessage = function(e) {
-        if (e.data === "start") {
-          timerID = setInterval(function() {
-            postMessage("tick");
-          }, interval);
-        } else if (e.data.interval) {
-          interval = e.data.interval;
-          if (timerID) {
-            clearInterval(timerID);
+    // Use both Web Worker and requestAnimationFrame for better mobile compatibility
+    if (typeof Worker !== 'undefined') {
+      const workerScript = `
+        var timerID = null;
+        var interval = 100;
+        
+        self.onmessage = function(e) {
+          if (e.data === "start") {
             timerID = setInterval(function() {
               postMessage("tick");
             }, interval);
+          } else if (e.data.interval) {
+            interval = e.data.interval;
+            if (timerID) {
+              clearInterval(timerID);
+              timerID = setInterval(function() {
+                postMessage("tick");
+              }, interval);
+            }
+          } else if (e.data === "stop") {
+            clearInterval(timerID);
+            timerID = null;
           }
-        } else if (e.data === "stop") {
-          clearInterval(timerID);
-          timerID = null;
+        };
+      `;
+      
+      try {
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        this.timerWorker = new Worker(URL.createObjectURL(blob));
+        
+        this.timerWorker.onmessage = (e) => {
+          if (e.data === 'tick') {
+            this.scheduler();
+          }
+        };
+        
+        this.timerWorker.onerror = (error) => {
+          console.error('Timer worker error:', error);
+          this.useRafTimer();
+        };
+      } catch (error) {
+        console.error('Failed to create timer worker:', error);
+        this.useRafTimer();
+      }
+    } else {
+      this.useRafTimer();
+    }
+  }
+
+  useRafTimer() {
+    // Fallback to requestAnimationFrame for timing
+    console.log('Using requestAnimationFrame for timing');
+    let lastTime = 0;
+    
+    const rafTimer = (currentTime) => {
+      if (this.isRunning) {
+        if (currentTime - lastTime >= this.lookahead) {
+          this.scheduler();
+          lastTime = currentTime;
         }
-      };
-    `;
+        this.rafId = requestAnimationFrame(rafTimer);
+      }
+    };
     
-    const blob = new Blob([workerScript], { type: 'application/javascript' });
-    this.timerWorker = new Worker(URL.createObjectURL(blob));
+    this.startRafTimer = () => {
+      if (this.rafId) cancelAnimationFrame(this.rafId);
+      this.rafId = requestAnimationFrame(rafTimer);
+    };
     
-    this.timerWorker.onmessage = (e) => {
-      if (e.data === 'tick') {
-        this.scheduler();
+    this.stopRafTimer = () => {
+      if (this.rafId) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
       }
     };
   }
@@ -142,17 +197,21 @@ class AudioEngine {
         oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
     }
 
-    // Set volume and envelope
+    // Set volume and envelope with mobile-optimized settings
     const baseVolume = isAccent ? volume * 1.2 : volume * 0.8;
     const now = this.audioContext.currentTime;
     
+    // Slightly longer attack on mobile to avoid clicking
+    const attackTime = this.isMobile ? 0.002 : 0.001;
+    const releaseTime = this.isMobile ? 0.15 : 0.1;
+    
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(baseVolume, now + 0.001);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    gainNode.gain.linearRampToValueAtTime(baseVolume, now + attackTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
 
     // Start and stop the oscillator
     oscillator.start(now);
-    oscillator.stop(now + 0.1);
+    oscillator.stop(now + releaseTime);
 
     // Clean up
     setTimeout(() => {
@@ -163,7 +222,7 @@ class AudioEngine {
       } catch (e) {
         // Ignore errors when disconnecting already disconnected nodes
       }
-    }, 200);
+    }, Math.max(200, releaseTime * 1000 + 50));
   }
 
   nextNote() {
@@ -258,10 +317,12 @@ class AudioEngine {
       default: this.clickFrequency = 800;
     }
 
-    // Start the timer worker
+    // Start the timer worker or RAF timer
     if (this.timerWorker) {
       this.timerWorker.postMessage({ interval: this.lookahead });
       this.timerWorker.postMessage('start');
+    } else if (this.startRafTimer) {
+      this.startRafTimer();
     }
 
     return true;
@@ -271,6 +332,9 @@ class AudioEngine {
     this.isRunning = false;
     if (this.timerWorker) {
       this.timerWorker.postMessage('stop');
+    }
+    if (this.stopRafTimer) {
+      this.stopRafTimer();
     }
     this.notesInQueue = [];
   }
@@ -293,6 +357,9 @@ class AudioEngine {
     this.stop();
     if (this.timerWorker) {
       this.timerWorker.terminate();
+    }
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
     }
     if (this.audioContext) {
       this.audioContext.close();

@@ -143,6 +143,27 @@ const useMetronomeStore = create(
       
       setVolume: (volume) => set({ volume }),
       
+      // Live BPM Detection
+      syncToDetectedBPM: (detectedBPM, confidence = 1.0) => set((state) => {
+        if (detectedBPM && detectedBPM >= 30 && detectedBPM <= 300 && confidence > 0.5) {
+          const newBpm = Math.round(detectedBPM);
+          const updates = { bpm: newBpm };
+          
+          // Track BPM changes during active session
+          if (state.currentSessionStart && state.isPlaying) {
+            updates.currentSessionBpms = [...state.currentSessionBpms, newBpm];
+          }
+          
+          // Update global audio engine if playing
+          if (state.isPlaying) {
+            globalAudioService.updateTempo(newBpm);
+          }
+          
+          return updates;
+        }
+        return {};
+      }),
+      
       setTimerEnabled: (timerEnabled) => set({ timerEnabled }),
       
       setTimerDuration: (timerDuration) => set({ timerDuration }),
