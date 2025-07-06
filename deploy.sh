@@ -7,6 +7,9 @@ echo "🚀 Deploying ProMetronome to Netlify..."
 echo "📥 Pulling latest changes from GitHub..."
 git pull origin main
 
+# Navigate to frontend directory
+cd frontend
+
 # Install any new dependencies
 echo "📦 Installing dependencies..."
 npm install

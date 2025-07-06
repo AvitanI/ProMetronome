@@ -11,7 +11,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
+        policy.WithOrigins(
+                "http://localhost:3000", 
+                "http://localhost:3001",
+                "https://prometronome-api-1751789304.azurewebsites.net", // Azure backend URL
+                "https://your-netlify-domain.netlify.app", // Add your Netlify domain
+                "https://your-custom-domain.com" // Add your custom domain if you have one
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

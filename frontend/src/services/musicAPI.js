@@ -1,7 +1,8 @@
 // Updated Music API Service for ProMetronome Backend
 class MusicAPIService {
   constructor() {
-    this.backendURL = 'http://localhost:5139/api'; // .NET backend URL
+    // Use environment variable for production, fallback to localhost for development
+    this.backendURL = process.env.REACT_APP_API_URL || 'http://localhost:5136/api';
     this.fallbackToDemo = true; // Enable demo mode if backend is unavailable
   }
 
