@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000", 
                 "http://localhost:3001",
                 "https://prometronome-api-1751789304.azurewebsites.net", // Azure backend URL
-                "https://your-netlify-domain.netlify.app", // Add your Netlify domain
+                "https://gilded-dodol-307e9d.netlify.app", // Your Netlify domain
                 "https://your-custom-domain.com" // Add your custom domain if you have one
               )
               .AllowAnyHeader()
