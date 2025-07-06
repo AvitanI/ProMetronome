@@ -1,0 +1,6 @@
+@ProMetronomeAPI_HostAddress = http://localhost:5136
+
+GET {{ProMetronomeAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

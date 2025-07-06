@@ -14,6 +14,7 @@ import {
   Tab,
   Chip,
   CircularProgress,
+  useMediaQuery,
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import {
@@ -44,6 +45,7 @@ const packageInfo = require('../package.json');
 function App() {
   const { isDarkMode, toggleTheme } = useMetronomeStore();
   const theme = useMemo(() => createCustomTheme(isDarkMode), [isDarkMode]);
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const metronomeRef = useRef(null);
   const startMetronomeRef = useRef(null);
   const [currentTab, setCurrentTab] = useState(0);
@@ -190,13 +192,23 @@ function App() {
             <Tabs
               value={currentTab}
               onChange={handleTabChange}
-              centered
+              variant={isMobile ? "scrollable" : "standard"}
+              centered={!isMobile}
+              scrollButtons={isMobile ? "auto" : false}
+              allowScrollButtonsMobile={true}
               sx={{
                 '& .MuiTab-root': {
                   minHeight: 64,
-                  fontSize: '1rem',
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
                   fontWeight: 600,
                   textTransform: 'none',
+                  minWidth: { xs: 'auto', sm: 160 },
+                  px: { xs: 1, sm: 2 },
+                },
+                '& .MuiTabs-scrollButtons': {
+                  '&.Mui-disabled': {
+                    opacity: 0.3,
+                  },
                 },
               }}
             >

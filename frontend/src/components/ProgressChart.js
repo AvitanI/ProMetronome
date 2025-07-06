@@ -363,7 +363,7 @@ const ProgressChart = () => {
       </Grid>
 
       {/* Chart Description */}
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
         {chartType === 'practice-time' && (
           <Chip 
             label="Shows practice time per session" 

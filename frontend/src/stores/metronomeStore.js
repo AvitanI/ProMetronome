@@ -81,20 +81,24 @@ const useMetronomeStore = create(
         setIsPlaying: (isPlaying) => set((state) => {
           const updates = { isPlaying };
           
+          console.log('setIsPlaying called:', isPlaying, 'currentSessionStart:', state.currentSessionStart);
+          
           // Track practice sessions
           if (isPlaying && !state.currentSessionStart) {
             // Starting a new session
             updates.currentSessionStart = Date.now();
             updates.currentSessionBpms = [state.bpm];
             updates.timeRemaining = state.timerEnabled ? state.timerDuration : 0;
-            console.log('Starting new practice session');
+            console.log('Starting new practice session at:', updates.currentSessionStart);
           } else if (!isPlaying && state.currentSessionStart) {
             // Ending a session
             const sessionDuration = Date.now() - state.currentSessionStart;
             const sessionBpms = state.currentSessionBpms;
             
-            // Only save sessions longer than 10 seconds with meaningful BPM changes
-            if (sessionDuration > 10000 && sessionBpms.length > 0) {
+            console.log('Ending session - Duration:', sessionDuration, 'BPMs:', sessionBpms);
+            
+            // Only save sessions longer than 5 seconds with meaningful BPM changes (reduced for easier testing)
+            if (sessionDuration > 5000 && sessionBpms.length > 0) {
               const averageBpm = sessionBpms.reduce((sum, bpm) => sum + bpm, 0) / sessionBpms.length;
               
               const newSession = {
@@ -110,7 +114,7 @@ const useMetronomeStore = create(
                 subdivision: state.subdivision.name
               };
               
-              console.log('Ending session:', newSession);
+              console.log('Saving session:', newSession);
               
               return {
                 isPlaying,
@@ -118,10 +122,16 @@ const useMetronomeStore = create(
                 currentSessionBpms: [],
                 sessions: [...state.sessions, newSession]
               };
+            } else {
+              console.log('Session too short or no BPM changes - not saving');
             }
-            return { isPlaying };
+            return { 
+              isPlaying,
+              currentSessionStart: null,
+              currentSessionBpms: []
+            };
           }
-          return { isPlaying };
+          return updates;
         }),
         
         setTimeSignature: (timeSignature) => set({ 
@@ -372,6 +382,37 @@ const useMetronomeStore = create(
           set((state) => ({
             sessions: [...state.sessions, ...sampleSessions]
           }));
+        },
+        
+        // Debug and utility functions
+        debugStorageData: () => {
+          const state = get();
+          console.log('Current sessions in store:', state.sessions);
+          console.log('Sessions length:', state.sessions?.length);
+          
+          // Check localStorage directly
+          try {
+            const storageData = localStorage.getItem('metronome-storage');
+            if (storageData) {
+              const parsed = JSON.parse(storageData);
+              console.log('localStorage sessions:', parsed.state?.sessions);
+            } else {
+              console.log('No localStorage data found');
+            }
+          } catch (error) {
+            console.error('Error reading localStorage:', error);
+          }
+        },
+        
+        clearStorageData: () => {
+          try {
+            localStorage.removeItem('metronome-storage');
+            console.log('Cleared localStorage data');
+            // Reload the page to reinitialize
+            window.location.reload();
+          } catch (error) {
+            console.error('Error clearing localStorage:', error);
+          }
         },
         
         // Reset metronome

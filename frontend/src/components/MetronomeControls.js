@@ -348,14 +348,14 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
         </Box>
 
         {/* Beat Indicators */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-          <Stack direction="row" spacing={1}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, overflow: 'hidden' }}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
             {beatIndicators.map((isActive, index) => (
               <Box
                 key={index}
                 sx={{
-                  width: 40,
-                  height: 40,
+                  width: { xs: 36, sm: 40 },
+                  height: { xs: 36, sm: 40 },
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -378,14 +378,14 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
 
         {/* Subdivision Indicators */}
         {subdivision.value > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <Stack direction="row" spacing={0.5}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, overflow: 'hidden' }}>
+            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
               {subdivisionIndicators.map((isActive, index) => (
                 <Box
                   key={index}
                   sx={{
-                    width: 24,
-                    height: 24,
+                    width: { xs: 20, sm: 24 },
+                    height: { xs: 20, sm: 24 },
                     borderRadius: '50%',
                     backgroundColor: isActive 
                       ? theme.palette.info.main

@@ -86,7 +86,7 @@ const SongManager = ({ onPlaySong }) => {
       setFormData({
         name: song.name || song.title || '', // Handle both name and title properties
         bpm: song.bpm,
-        timeSignature: song.timeSignature,
+        timeSignature: song.timeSignature || TIME_SIGNATURES[0], // Fallback to default if missing
         duration: song.duration || '',
         notes: song.notes || '',
       });
@@ -398,7 +398,7 @@ const SongManager = ({ onPlaySong }) => {
               <FormControl fullWidth>
                 <InputLabel>Time Signature</InputLabel>
                 <Select
-                  value={formData.timeSignature.value}
+                  value={formData.timeSignature?.value || formData.timeSignature || TIME_SIGNATURES[0].value}
                   label="Time Signature"
                   onChange={(e) => {
                     const sig = TIME_SIGNATURES.find(s => s.value === e.target.value);

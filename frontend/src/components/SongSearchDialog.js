@@ -58,7 +58,7 @@ const SongSearchDialog = ({ open, onClose }) => {
       
       try {
         const results = await musicAPI.searchSongs(searchQuery, 15);
-        setSearchResults(results);
+        setSearchResults(results.songs || []);
       } catch (err) {
         setError(err.message || 'Failed to search songs');
         setSearchResults([]);
@@ -133,7 +133,11 @@ const SongSearchDialog = ({ open, onClose }) => {
 
   const handlePreviewPlay = (song) => {
     if (!song.preview_url) {
-      setError('No preview available for this song');
+      if (song.source === 'demo') {
+        setError('Demo mode: Audio previews are not available. BPM values are provided for practice.');
+      } else {
+        setError('Preview not available for this track. This is common due to licensing restrictions. The BPM data is still accurate for practice.');
+      }
       return;
     }
 
@@ -150,6 +154,18 @@ const SongSearchDialog = ({ open, onClose }) => {
       return;
     }
 
+    // Handle demo songs with special preview behavior
+    if (song.source === 'demo') {
+      setError('Demo mode: Audio previews are not available. BPM values are provided for practice.');
+      setPlayingPreview(song.id);
+      
+      // Auto-clear the preview state after 2 seconds for demo
+      setTimeout(() => {
+        setPlayingPreview(null);
+      }, 2000);
+      return;
+    }
+
     // Create new audio element and play
     const audio = new Audio(song.preview_url);
     audio.volume = 0.7;
@@ -160,7 +176,7 @@ const SongSearchDialog = ({ open, onClose }) => {
     });
 
     audio.addEventListener('error', () => {
-      setError('Failed to load preview');
+      setError('Failed to load preview - this may be due to licensing restrictions');
       setPlayingPreview(null);
       setAudioElement(null);
     });
@@ -169,7 +185,7 @@ const SongSearchDialog = ({ open, onClose }) => {
       setPlayingPreview(song.id);
       setAudioElement(audio);
     }).catch(() => {
-      setError('Failed to play preview');
+      setError('Failed to play preview - this may be due to licensing restrictions');
       setPlayingPreview(null);
       setAudioElement(null);
     });
@@ -221,8 +237,8 @@ const SongSearchDialog = ({ open, onClose }) => {
         {/* Info Alert */}
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="body2">
-            BPM values are estimated based on genre and song characteristics. 
-            You can adjust the BPM after adding to your song list.
+            Search for your favorite songs to get BPM suggestions for practice. 
+            BPM values are estimated based on genre and song characteristics, and can be adjusted after adding to your song list.
           </Typography>
         </Alert>
 
@@ -230,6 +246,16 @@ const SongSearchDialog = ({ open, onClose }) => {
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {/* Demo Mode Alert */}
+        {!loading && searchResults.length > 0 && searchResults.some(song => song.source === 'demo') && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Demo Mode Active:</strong> External music APIs are restricted in development mode due to CORS policies. 
+              Showing sample search results with realistic BPM estimates for demonstration purposes.
+            </Typography>
           </Alert>
         )}
 
@@ -291,48 +317,48 @@ const SongSearchDialog = ({ open, onClose }) => {
                       <AlbumIcon sx={{ fontSize: '2rem', color: 'text.secondary' }} />
                     </Avatar>
                     
-                    {/* Preview Play Button Overlay */}
-                    {song.preview_url && (
-                      <Box
-                        className="play-overlay"
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          opacity: playingPreview === song.id ? 1 : 0,
-                          transition: 'opacity 0.2s ease-in-out',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => handlePreviewPlay(song)}
-                      >
-                        <IconButton
-                          sx={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            color: 'primary.main',
-                            width: 36,
-                            height: 36,
-                            '&:hover': {
-                              backgroundColor: 'white',
-                              transform: 'scale(1.1)',
-                            },
-                            transition: 'all 0.2s ease-in-out',
-                          }}
-                          size="small"
-                        >
-                          {playingPreview === song.id ? (
-                            <PauseIcon fontSize="small" />
-                          ) : (
-                            <PlayArrowIcon fontSize="small" />
-                          )}
-                        </IconButton>
+                    {/* Preview Play Button Overlay - Always show for feedback */}
+                    <Box
+                      className="play-overlay"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        opacity: playingPreview === song.id ? 1 : 0,
+                        transition: 'opacity 0.2s ease-in-out',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => handlePreviewPlay(song)}
+                    >
+                        <Tooltip title={song.source === 'demo' ? "Demo mode - Click for BPM info" : "Play preview"}>
+                          <IconButton
+                            sx={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              color: song.source === 'demo' ? 'warning.main' : 'primary.main',
+                              width: 36,
+                              height: 36,
+                              '&:hover': {
+                                backgroundColor: 'white',
+                                transform: 'scale(1.1)',
+                              },
+                              transition: 'all 0.2s ease-in-out',
+                            }}
+                            size="small"
+                          >
+                            {playingPreview === song.id ? (
+                              song.source === 'demo' ? <InfoIcon fontSize="small" /> : <PauseIcon fontSize="small" />
+                            ) : (
+                              song.source === 'demo' ? <InfoIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
                       </Box>
-                    )}
                     
                     {/* Playing Indicator */}
                     {playingPreview === song.id && (
@@ -423,6 +449,15 @@ const SongSearchDialog = ({ open, onClose }) => {
                           />
                         )}
                         
+                        {song.source === 'demo' && (
+                          <Chip
+                            label="Demo Mode"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                          />
+                        )}
+                        
                         {song.estimated_bpm && (
                           <Tooltip title={getConfidenceText(song.confidence)}>
                             <Chip
@@ -448,10 +483,10 @@ const SongSearchDialog = ({ open, onClose }) => {
                         {song.preview_url && playingPreview !== song.id && (
                           <Chip
                             icon={<PlayArrowIcon />}
-                            label="Preview Available"
+                            label={song.source === 'demo' ? "Demo Info" : "Preview Available"}
                             size="small"
                             variant="outlined"
-                            color="secondary"
+                            color={song.source === 'demo' ? "warning" : "secondary"}
                           />
                         )}
                       </Box>

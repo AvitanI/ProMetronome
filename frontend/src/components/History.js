@@ -41,10 +41,14 @@ const History = React.memo(() => {
     clearHistory, 
     deleteSession, 
     getHistoryStats,
-    generateSampleData
+    generateSampleData,
+    debugStorageData,
+    clearStorageData
   } = useMetronomeStore();
 
   console.log('History component - sessions:', sessions);
+  console.log('History component - sessions length:', sessions?.length);
+  console.log('History component - sessions data:', JSON.stringify(sessions, null, 2));
   
   // Memoize expensive calculations
   const stats = useMemo(() => getHistoryStats(), [sessions, getHistoryStats]);
@@ -131,9 +135,45 @@ const History = React.memo(() => {
           <Typography variant="h6" sx={{ mb: 1 }}>
             No Practice History Yet
           </Typography>
-          <Typography variant="body2">
+          <Typography variant="body2" sx={{ mb: 2 }}>
             Start practicing with the metronome to track your sessions and see detailed statistics about your practice time and BPM usage.
           </Typography>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
+            💡 How to create practice sessions:
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1, textAlign: 'left' }}>
+            1. Go to the "Metronome" tab<br/>
+            2. Click the play button to start the metronome<br/>
+            3. Let it run for at least 5 seconds<br/>
+            4. Click stop to end the session<br/>
+            5. Return here to see your practice data!
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={generateSampleData}
+            sx={{ mt: 2, mr: 2 }}
+            size="small"
+          >
+            Generate Sample Data (For Demo)
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={debugStorageData}
+            sx={{ mt: 2, mr: 1 }}
+            size="small"
+            color="secondary"
+          >
+            Debug Storage
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={clearStorageData}
+            sx={{ mt: 2 }}
+            size="small"
+            color="error"
+          >
+            Clear Storage
+          </Button>
         </Alert>
       </Box>
     );
@@ -146,13 +186,23 @@ const History = React.memo(() => {
         <Tabs
           value={historyTab}
           onChange={(e, newValue) => setHistoryTab(newValue)}
-          centered
+          variant={isMobile ? "scrollable" : "standard"}
+          centered={!isMobile}
+          scrollButtons={isMobile ? "auto" : false}
+          allowScrollButtonsMobile={true}
           sx={{
             '& .MuiTab-root': {
               minHeight: 56,
-              fontSize: '0.95rem',
+              fontSize: { xs: '0.875rem', sm: '0.95rem' },
               fontWeight: 600,
               textTransform: 'none',
+              minWidth: { xs: 'auto', sm: 160 },
+              px: { xs: 1, sm: 2 },
+            },
+            '& .MuiTabs-scrollButtons': {
+              '&.Mui-disabled': {
+                opacity: 0.3,
+              },
             },
           }}
         >
@@ -188,16 +238,44 @@ const History = React.memo(() => {
               <Typography variant="h6" sx={{ mb: 1 }}>
                 No Practice History Yet
               </Typography>
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ mb: 2 }}>
                 Start practicing with the metronome to track your sessions and see detailed statistics about your practice time and BPM usage.
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
+                💡 How to create practice sessions:
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, textAlign: 'left' }}>
+                1. Go to the "Metronome" tab<br/>
+                2. Click the play button to start the metronome<br/>
+                3. Let it run for at least 5 seconds<br/>
+                4. Click stop to end the session<br/>
+                5. Return here to see your practice data!
               </Typography>
               <Button
                 variant="outlined"
                 onClick={generateSampleData}
-                sx={{ mt: 2 }}
+                sx={{ mt: 2, mr: 2 }}
                 size="small"
               >
                 Generate Sample Data (For Demo)
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={debugStorageData}
+                sx={{ mt: 2, mr: 1 }}
+                size="small"
+                color="secondary"
+              >
+                Debug Storage
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={clearStorageData}
+                sx={{ mt: 2 }}
+                size="small"
+                color="error"
+              >
+                Clear Storage
               </Button>
             </Alert>
           ) : (
