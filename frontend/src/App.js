@@ -117,7 +117,7 @@ function App() {
               Pro Metronome
             </Typography>
             <Chip 
-              label={`v${packageInfo.version}`}
+              label={`v${packageInfo.version} - Updated`}
               size="small"
               sx={{ 
                 ml: 2, 

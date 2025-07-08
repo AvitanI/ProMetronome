@@ -100,26 +100,7 @@ const createCustomTheme = (isDarkMode) => {
           },
         },
       },
-      MuiSlider: {
-        styleOverrides: {
-          root: {
-            height: 8,
-          },
-          thumb: {
-            height: 24,
-            width: 24,
-            '&:hover': {
-              boxShadow: '0 0 0 8px rgba(98, 0, 234, 0.16)',
-            },
-          },
-          track: {
-            border: 'none',
-          },
-          rail: {
-            opacity: 0.3,
-          },
-        },
-      },
+      // Removed MuiSlider overrides - using custom ThumblessSlider instead
       MuiFab: {
         styleOverrides: {
           root: {

@@ -10,7 +10,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Slider,
   Switch,
   FormControlLabel,
   Chip,
@@ -23,13 +22,12 @@ import {
   PlayArrow,
   Pause,
   Stop,
-  VolumeUp,
   Timer,
   MusicNote,
 } from '@mui/icons-material';
 import useMetronomeStore, { TIME_SIGNATURES, CLICK_SOUNDS, SUBDIVISIONS } from '../stores/metronomeStore';
 import globalAudioService from '../services/globalAudioService';
-import CircularBPMDial from './CircularBPMDial';
+import ThumblessSlider from './ThumblessSlider';
 
 // Debounce utility function
 const useDebounce = (value, delay) => {
@@ -307,7 +305,16 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         {/* BPM Dial */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <CircularBPMDial size={isMobile ? 240 : 280} />
+          <ThumblessSlider
+            value={localBpm}
+            onChange={setLocalBpm}
+            min={30}
+            max={300}
+            step={1}
+            width={isMobile ? 240 : 280}
+            label="BPM"
+            formatValue={(val) => `${val}`}
+          />
         </Box>
 
         {/* BPM Controls */}
@@ -348,7 +355,7 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
         </Box>
 
         {/* Beat Indicators */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, p: 1 }}>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
             {beatIndicators.map((isActive, index) => (
               <Box
@@ -378,7 +385,7 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
 
         {/* Subdivision Indicators */}
         {subdivision.value > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, p: 1 }}>
             <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
               {subdivisionIndicators.map((isActive, index) => (
                 <Box
@@ -534,43 +541,29 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
 
         {/* Volume Controls */}
         <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <VolumeUp sx={{ mr: 1 }} />
-            <Typography variant="body2" sx={{ flexGrow: 1 }}>
-              Main Volume
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {Math.round(volume * 100)}%
-            </Typography>
-          </Box>
-          <Slider
+          <ThumblessSlider
             value={volume}
-            onChange={(e, value) => setVolume(value)}
+            onChange={(newValue) => setVolume(newValue)}
             min={0}
             max={1}
-            step={0.1}
-            size="small"
+            step={0.01}
+            label="Main Volume"
+            formatValue={(val) => `${Math.round(val * 100)}%`}
+            width={120}
           />
         </Box>
 
         {subdivision.value > 1 && (
           <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <VolumeUp sx={{ mr: 1, fontSize: 18 }} />
-              <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                Subdivision Volume
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {Math.round(subdivisionVolume * 100)}%
-              </Typography>
-            </Box>
-            <Slider
+            <ThumblessSlider
               value={subdivisionVolume}
-              onChange={(e, value) => setSubdivisionVolume(value)}
+              onChange={(newValue) => setSubdivisionVolume(newValue)}
               min={0}
               max={1}
-              step={0.1}
-              size="small"
+              step={0.01}
+              label="Subdivision Volume"
+              formatValue={(val) => `${Math.round(val * 100)}%`}
+              width={120}
             />
           </Box>
         )}
@@ -607,18 +600,20 @@ const MetronomeControls = React.memo(forwardRef((props, ref) => {
             
             {timerEnabled && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Slider
-                  value={timerDuration}
-                  onChange={(e, value) => {
-                    setTimerDuration(value);
-                    if (!isPlaying) setTimeRemaining(value);
-                  }}
-                  min={10}
-                  max={600}
-                  step={10}
-                  size="small"
-                  sx={{ width: 100 }}
-                />
+                <Box sx={{ width: 100 }}>
+                  <ThumblessSlider
+                    value={timerDuration}
+                    onChange={(newValue) => {
+                      setTimerDuration(newValue);
+                      if (!isPlaying) setTimeRemaining(newValue);
+                    }}
+                    min={10}
+                    max={600}
+                    step={10}
+                    width={100}
+                    formatValue={(val) => `${Math.floor(val / 60)}:${(val % 60).toString().padStart(2, '0')}`}
+                  />
+                </Box>
                 <Chip
                   label={formatTime(isPlaying ? timeRemaining : timerDuration)}
                   size="small"

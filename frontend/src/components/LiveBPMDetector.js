@@ -6,7 +6,6 @@ import {
   Typography,
   Button,
   IconButton,
-  LinearProgress,
   Stack,
   Chip,
   Paper,
@@ -864,20 +863,7 @@ const LiveBPMDetector = React.memo(() => {
                   Confidence: {Math.round(confidence * 100)}%
                   {bpmHistoryRef.current.length > 0 && ` | Stability: ${bpmHistoryRef.current.length}/5`}
                 </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={confidence * 100} 
-                  sx={{ 
-                    mt: 0.5, 
-                    height: 6, 
-                    borderRadius: 3,
-                    '& .MuiLinearProgress-bar': {
-                      backgroundColor: confidence > 0.8 ? theme.palette.success.main :
-                                     confidence > 0.6 ? theme.palette.warning.main :
-                                     theme.palette.error.main
-                    }
-                  }}
-                />
+                {/* LinearProgress removed per user request */}
               </Box>
             )}
           </Box>
@@ -887,20 +873,7 @@ const LiveBPMDetector = React.memo(() => {
           <Typography variant="caption" color="text.secondary" gutterBottom>
             Audio Input Level
           </Typography>
-          <LinearProgress 
-            variant="determinate" 
-            value={audioLevel * 100} 
-            sx={{ 
-              height: 8, 
-              borderRadius: 4,
-              backgroundColor: theme.palette.grey[300],
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: audioLevel > 0.8 ? theme.palette.error.main : 
-                               audioLevel > 0.5 ? theme.palette.warning.main : 
-                               theme.palette.success.main
-              }
-            }}
-          />
+          {/* LinearProgress removed per user request */}
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', opacity: 0.8 }}>
             {audioLevel > 0.1 ? '🎵 Audio detected' : '🔇 No audio - try playing louder'}
           </Typography>

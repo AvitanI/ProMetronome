@@ -9,7 +9,6 @@ import {
   CardContent,
   CardActions,
   Chip,
-  LinearProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -386,18 +385,7 @@ const CoachDashboard = () => {
                 <Typography variant="h4">{bpm} BPM</Typography>
               </Box>
               
-              <LinearProgress 
-                variant="determinate" 
-                value={getCurrentProgress()} 
-                sx={{ 
-                  height: 8, 
-                  borderRadius: 4,
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: '#4caf50'
-                  }
-                }}
-              />
+              {/* LinearProgress removed per user request */}
               <Typography variant="body2" sx={{ mt: 1 }}>
                 Progress: {Math.round(getCurrentProgress())}% • Time: {formatTime(getSessionDuration())}
               </Typography>

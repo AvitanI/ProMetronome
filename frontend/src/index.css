@@ -32,3 +32,48 @@ code {
 button {
   cursor: pointer;
 }
+
+/* Removed MuiSlider CSS overrides - using custom ThumblessSlider instead */
+
+/* Remove any scrollbars that might look like sliders */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Force hide any remaining Material-UI sliders and specific problematic classes */
+.MuiSlider-root,
+[class*="MuiSlider"],
+input[type="range"],
+.css-oh2ff8,
+[class*="css-oh2ff8"],
+[class^="css-oh2ff8"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  z-index: -1 !important;
+}
+
+/* Hide any Box that might be rendering as a slider */
+.MuiBox-root[class*="css-oh2ff8"],
+.MuiBox-root[class^="css-oh2ff8"] {
+  display: none !important;
+}
+
+/* Nuclear option - hide any element with that specific class pattern */
+*[class*="css-oh2ff8"] {
+  display: none !important;
+}

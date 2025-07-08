@@ -131,6 +131,7 @@ const COMMON_COMPONENT_OVERRIDES = {
       },
     },
   },
+  // Removed MuiSlider overrides - using custom ThumblessSlider instead
 };
 
 // Memoized theme creation - these will be cached at build time
