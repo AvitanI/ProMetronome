@@ -69,18 +69,26 @@ class GlobalAudioService {
 
   // Test method to verify audio is working
   async testAudio() {
-    console.log('Testing audio...');
-    try {
+    if (!this.audioEngine) {
       await this.initialize();
-      console.log('Audio engine initialized');
-      console.log('Audio context state:', this.audioEngine?.audioContext?.state);
-      
-      // Test with a simple beep
-      return await this.start(120, 4, true, 'classic', 0.7, 1, 0.5);
-    } catch (error) {
-      console.error('Audio test failed:', error);
-      return false;
     }
+    
+    console.log('Testing audio engine...');
+    
+    // Test immediate click
+    const result = await this.audioEngine.testImmediateClick();
+    
+    // Get timing info for debugging
+    const timingInfo = this.audioEngine.getTimingInfo();
+    console.log('Audio timing info:', timingInfo);
+    
+    return result;
+  }
+
+  // Get timing information for debugging mobile issues
+  getTimingInfo() {
+    if (!this.audioEngine) return null;
+    return this.audioEngine.getTimingInfo();
   }
 }
 

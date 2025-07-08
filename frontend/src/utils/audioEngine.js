@@ -3,9 +3,13 @@ class AudioEngine {
     this.audioContext = null;
     this.nextNoteTime = 0.0;
     this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    // Increase lookahead and schedule ahead time for mobile devices
-    this.lookahead = this.isMobile ? 10.0 : 25.0; // More frequent scheduling on mobile
-    this.scheduleAheadTime = this.isMobile ? 0.25 : 0.1; // More buffer time for mobile
+    this.isAndroid = /Android/i.test(navigator.userAgent);
+    
+    // Mobile devices need MORE lookahead and schedule ahead time due to higher latency
+    // Android devices especially need more buffer time
+    this.lookahead = this.isMobile ? (this.isAndroid ? 50.0 : 25.0) : 25.0;
+    this.scheduleAheadTime = this.isMobile ? (this.isAndroid ? 0.4 : 0.3) : 0.1;
+    
     this.notesInQueue = [];
     this.timerWorker = null;
     this.rafId = null;
@@ -32,13 +36,25 @@ class AudioEngine {
         // Set mobile-specific optimizations
         if (this.isMobile && this.audioContext.outputLatency !== undefined) {
           // Account for output latency on mobile devices
-          this.scheduleAheadTime = Math.max(this.scheduleAheadTime, this.audioContext.outputLatency + 0.05);
+          const baseLatency = this.audioContext.outputLatency;
+          const androidBonus = this.isAndroid ? 0.1 : 0.05; // Extra buffer for Android
+          this.scheduleAheadTime = Math.max(this.scheduleAheadTime, baseLatency + androidBonus);
+        }
+        
+        // Android-specific optimizations
+        if (this.isAndroid) {
+          // Force higher sample rate if supported for better timing
+          if (this.audioContext.sampleRate < 44100) {
+            console.log('Android device with low sample rate detected');
+          }
         }
         
         console.log('AudioContext created, state:', this.audioContext.state);
         console.log('Mobile device detected:', this.isMobile);
+        console.log('Android device detected:', this.isAndroid);
         console.log('Output latency:', this.audioContext.outputLatency || 'unknown');
         console.log('Schedule ahead time:', this.scheduleAheadTime);
+        console.log('Lookahead time:', this.lookahead);
       } catch (error) {
         console.error('Failed to create audio context:', error);
         return false;
@@ -116,7 +132,10 @@ class AudioEngine {
     
     const rafTimer = (currentTime) => {
       if (this.isRunning) {
-        if (currentTime - lastTime >= this.lookahead) {
+        // Use different timing intervals for mobile vs desktop
+        const interval = this.isMobile ? (this.isAndroid ? 30 : 20) : 16.67; // ~60fps for desktop, slower for mobile
+        
+        if (currentTime - lastTime >= interval) {
           this.scheduler();
           lastTime = currentTime;
         }
@@ -201,9 +220,9 @@ class AudioEngine {
     const baseVolume = isAccent ? volume * 1.2 : volume * 0.8;
     const now = this.audioContext.currentTime;
     
-    // Slightly longer attack on mobile to avoid clicking
-    const attackTime = this.isMobile ? 0.002 : 0.001;
-    const releaseTime = this.isMobile ? 0.15 : 0.1;
+    // Longer attack and release times for mobile, especially Android
+    const attackTime = this.isAndroid ? 0.003 : (this.isMobile ? 0.002 : 0.001);
+    const releaseTime = this.isAndroid ? 0.2 : (this.isMobile ? 0.15 : 0.1);
     
     gainNode.gain.setValueAtTime(0, now);
     gainNode.gain.linearRampToValueAtTime(baseVolume, now + attackTime);
@@ -248,6 +267,10 @@ class AudioEngine {
       time: time 
     });
 
+    // Clean up old notes from the queue (mobile optimization)
+    const currentTime = this.audioContext.currentTime;
+    this.notesInQueue = this.notesInQueue.filter(note => note.time > currentTime - 1.0);
+
     // Determine if this is a main beat or subdivision
     const isMainBeat = subdivisionNumber === 0;
     const isAccent = this.accentFirstBeat && beatNumber === 0 && isMainBeat;
@@ -281,6 +304,15 @@ class AudioEngine {
       this.scheduleNote(this.currentNote, this.currentSubdivision, this.nextNoteTime);
       this.nextNote();
     }
+    
+    // Android optimization: Schedule additional notes if we have room
+    if (this.isAndroid) {
+      let extraScheduleTime = this.scheduleAheadTime * 1.5; // 50% more buffer for Android
+      while (this.nextNoteTime < this.audioContext.currentTime + extraScheduleTime && this.notesInQueue.length < 10) {
+        this.scheduleNote(this.currentNote, this.currentSubdivision, this.nextNoteTime);
+        this.nextNote();
+      }
+    }
   }
 
   async start(bpm, beatsPerMeasure = 4, accentFirstBeat = true, clickSound = 'classic', volume = 0.7, subdivisionValue = 1, subdivisionVolume = 0.5, onBeat = null, onSubdivision = null) {
@@ -304,7 +336,6 @@ class AudioEngine {
     this.onSubdivision = onSubdivision;
     this.currentNote = 0;
     this.currentSubdivision = 0;
-    this.nextNoteTime = this.audioContext.currentTime;
     this.notesInQueue = [];
     this.isRunning = true;
 
@@ -316,6 +347,13 @@ class AudioEngine {
       case 'sine': this.clickFrequency = 600; break;
       default: this.clickFrequency = 800;
     }
+
+    // CRITICAL FIX: Schedule the first note immediately for instant response
+    this.nextNoteTime = this.audioContext.currentTime + 0.005; // 5ms delay for immediate response
+    
+    // Schedule the first note right away
+    this.scheduleNote(this.currentNote, this.currentSubdivision, this.nextNoteTime);
+    this.nextNote();
 
     // Start the timer worker or RAF timer
     if (this.timerWorker) {
@@ -350,6 +388,37 @@ class AudioEngine {
     if (volume !== undefined) this.volume = volume;
     if (subdivisionValue !== undefined) this.subdivisionValue = subdivisionValue;
     if (subdivisionVolume !== undefined) this.subdivisionVolume = subdivisionVolume;
+  }
+
+  // Test method to verify immediate audio response
+  async testImmediateClick() {
+    const audioReady = await this.ensureAudioContext();
+    if (!audioReady) return false;
+    
+    console.log('Testing immediate click - Android optimizations:', this.isAndroid);
+    
+    // Create immediate click sound
+    this.createClickSound(800, true, 0.8, 'classic');
+    
+    return true;
+  }
+
+  // Debug method to get timing information
+  getTimingInfo() {
+    if (!this.audioContext) return null;
+    
+    return {
+      currentTime: this.audioContext.currentTime,
+      nextNoteTime: this.nextNoteTime,
+      scheduleAheadTime: this.scheduleAheadTime,
+      lookahead: this.lookahead,
+      isMobile: this.isMobile,
+      isAndroid: this.isAndroid,
+      outputLatency: this.audioContext.outputLatency,
+      sampleRate: this.audioContext.sampleRate,
+      state: this.audioContext.state,
+      queueLength: this.notesInQueue.length
+    };
   }
 
   // Clean up resources
